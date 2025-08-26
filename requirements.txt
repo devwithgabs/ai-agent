@@ -1,0 +1,6 @@
+google-adk[database]==0.3.0
+toolbox-core>=0.5.0
+deprecated>=1.2.18
+wrapt>=1.17.3
+python-dotenv>=1.1.0
+colorama>=0.4.6

@@ -1,0 +1,206 @@
+sources:
+  furniture-bq-source:
+    kind: bigquery
+    project: adk-demo-469711
+
+tools:
+  explore_tables:
+    kind: bigquery-sql
+    source: furniture-bq-source
+    statement: |
+      SELECT table_name, column_name, data_type
+      FROM `adk-demo-469711.mobilis.INFORMATION_SCHEMA.COLUMNS`
+      ORDER BY table_name, ordinal_position
+    description: |
+      Explore the database schema to understand table structure.
+
+  check_stores:
+    kind: bigquery-sql
+    source: furniture-bq-source
+    statement: |
+      SELECT *
+      FROM `adk-demo-469711.mobilis.stores`
+      LIMIT 10
+    description: |
+      Check what stores exist in the database.
+
+  list_store_ids:
+    kind: bigquery-sql
+    source: furniture-bq-source
+    statement: |
+      SELECT DISTINCT store_id, store_name, city, address
+      FROM `adk-demo-469711.mobilis.stores`
+      ORDER BY store_id
+    description: |
+      List all available store IDs and their basic information.
+
+  check_stock_by_store:
+    kind: bigquery-sql
+    source: furniture-bq-source
+    statement: |
+      SELECT store_id, COUNT(*) as inventory_count, 
+             SUM(available_quantity) as total_items
+      FROM `adk-demo-469711.mobilis.stock`
+      GROUP BY store_id
+      ORDER BY store_id
+    description: |
+      Show inventory count by store ID to see which stores have stock data.
+
+  debug_store_006:
+    kind: bigquery-sql
+    source: furniture-bq-source
+    statement: |
+      SELECT 'stores_table' as source, store_id, store_name
+      FROM `adk-demo-469711.mobilis.stores`
+      WHERE store_id LIKE '%006%' OR store_id LIKE '%6%'
+      UNION ALL
+      SELECT 'stock_table' as source, store_id, CAST(COUNT(*) AS STRING) as count
+      FROM `adk-demo-469711.mobilis.stock`
+      WHERE store_id LIKE '%006%' OR store_id LIKE '%6%'
+      GROUP BY store_id
+    description: |
+      Debug tool to find any store ID containing '006' or '6' in both tables.
+
+  check_products:
+    kind: bigquery-sql
+    source: furniture-bq-source
+    statement: |
+      SELECT *
+      FROM `adk-demo-469711.mobilis.products`
+      LIMIT 10
+    description: |
+      Check what products exist in the database.
+
+  check_stock:
+    kind: bigquery-sql
+    source: furniture-bq-source
+    statement: |
+      SELECT *
+      FROM `adk-demo-469711.mobilis.stock`
+      LIMIT 10
+    description: |
+      Check what stock data exists in the database.
+
+  get_store_inventory:
+    kind: bigquery-sql
+    source: furniture-bq-source
+    statement: |
+      SELECT 
+        s.store_id,
+        s.product_id,
+        s.color,
+        s.material,
+        s.available_quantity,
+        s.location_in_store,
+        p.product_name,
+        p.description
+      FROM `adk-demo-469711.mobilis.stock` s
+      LEFT JOIN `adk-demo-469711.mobilis.products` p ON s.product_id = p.product_id
+      WHERE s.store_id = @store_id
+      ORDER BY s.available_quantity DESC
+    parameters:
+      - name: store_id
+        type: string
+        description: Store ID to get inventory for (e.g., 'STORE_001', 'STORE_006', etc.)
+    description: |
+      Get all inventory/stock for a specific store ID.
+
+  search_products:
+    kind: bigquery-sql
+    source: furniture-bq-source
+    statement: |
+      SELECT 
+        product_id,
+        product_name,
+        description,
+        category,
+        subcategory,
+        base_price
+      FROM `adk-demo-469711.mobilis.products`
+      WHERE LOWER(product_name) LIKE LOWER(CONCAT('%', @search_term, '%'))
+         OR LOWER(description) LIKE LOWER(CONCAT('%', @search_term, '%'))
+         OR LOWER(category) LIKE LOWER(CONCAT('%', @search_term, '%'))
+      LIMIT 20
+    parameters:
+      - name: search_term
+        type: string
+        description: Search term for products
+    description: |
+      Search for furniture products by name, category, or description.
+
+  check_product_availability:
+    kind: bigquery-sql
+    source: furniture-bq-source
+    statement: |
+      SELECT 
+        s.store_id, 
+        s.available_quantity, 
+        s.color, 
+        s.location_in_store, 
+        st.store_name,
+        p.product_name, 
+        p.description
+      FROM `adk-demo-469711.mobilis.stock` s
+      LEFT JOIN `adk-demo-469711.mobilis.stores` st ON s.store_id = st.store_id
+      LEFT JOIN `adk-demo-469711.mobilis.products` p ON s.product_id = p.product_id
+      WHERE LOWER(p.product_name) LIKE LOWER(CONCAT('%', @product_name, '%'))
+        AND s.available_quantity > 0
+      ORDER BY s.available_quantity DESC
+    parameters:
+      - name: product_name
+        type: string
+        description: Product name to search for
+    description: |
+      Check product availability across all stores.
+
+  simple_test_query:
+    kind: bigquery-sql
+    source: furniture-bq-source
+    statement: |
+      SELECT COUNT(*) as total_records
+      FROM `adk-demo-469711.mobilis.stock`
+    description: |
+      Simple test query to verify BigQuery connection works.
+
+  search_by_store_name:
+    kind: bigquery-sql
+    source: furniture-bq-source
+    statement: |
+      SELECT 
+        s.store_id,
+        st.store_name,
+        s.product_id,
+        p.product_name,
+        s.color,
+        s.available_quantity,
+        s.location_in_store
+      FROM `adk-demo-469711.mobilis.stock` s
+      JOIN `adk-demo-469711.mobilis.stores` st ON s.store_id = st.store_id
+      JOIN `adk-demo-469711.mobilis.products` p ON s.product_id = p.product_id
+      WHERE LOWER(st.store_name) LIKE LOWER(CONCAT('%', @store_name, '%'))
+        AND LOWER(p.product_name) LIKE LOWER(CONCAT('%', @product_name, '%'))
+        AND s.available_quantity > 0
+    parameters:
+      - name: store_name
+        type: string
+        description: Store name to search for
+      - name: product_name
+        type: string
+        description: Product name to search for
+    description: |
+      Search for specific products at a specific store by name.
+
+toolsets:
+  furniture_toolset:
+    - explore_tables
+    - check_stores
+    - list_store_ids
+    - check_stock_by_store
+    - debug_store_006
+    - check_products
+    - check_stock
+    - get_store_inventory
+    - search_products
+    - check_product_availability
+    - simple_test_query
+    - search_by_store_name
