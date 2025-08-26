@@ -1,0 +1,35 @@
+[tool.poetry]
+name = "ai-agent"
+version = "0.1.0"
+description = "AI-powered furniture store floor assistance agent with BigQuery integration"
+authors = ["Gabriela Segura"]
+readme = "README.md"
+packages = [{include = "searcher_agent"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+google-adk = {extras = ["database"], version = ">=1.0.0"}
+google-cloud-bigquery = ">=3.0.0"
+deprecated = ">=1.2.18"
+wrapt = ">=1.17.3"
+python-dotenv = ">=1.1.0"
+colorama = ">=0.4.6"
+absl-py = ">=2.0.0"
+uvicorn = ">=0.24.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.0.0"
+pytest-asyncio = "^0.21.0"
+black = "^23.0.0"
+flake8 = "^6.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+furniture-agent = "searcher_agent.agent:main"
+ai-agent = "searcher_agent:app"
+deploy-local = "deployment.local:main"
+deploy-remote = "deployment.remote:main"
+cleanup = "deployment.cleanup:cleanup_deployment"

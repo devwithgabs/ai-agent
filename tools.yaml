@@ -86,72 +86,72 @@ tools:
     source: furniture-bq-source
     statement: |
       SELECT 
-        s.store_id,
-        s.product_id,
+        p.product_name,
+        p.category,
         s.color,
-        s.material,
         s.available_quantity,
         s.location_in_store,
-        p.product_name,
-        p.description
+        p.base_price
       FROM `adk-demo-469711.mobilis.stock` s
-      LEFT JOIN `adk-demo-469711.mobilis.products` p ON s.product_id = p.product_id
+      JOIN `adk-demo-469711.mobilis.products` p ON s.product_id = p.product_id
       WHERE s.store_id = @store_id
-      ORDER BY s.available_quantity DESC
+        AND s.available_quantity > 0
+      ORDER BY p.category, p.product_name
     parameters:
       - name: store_id
         type: string
-        description: Store ID to get inventory for (e.g., 'STORE_001', 'STORE_006', etc.)
+        description: Store ID to check inventory for
     description: |
-      Get all inventory/stock for a specific store ID.
+      Get inventory for a specific store by store ID, including product prices.
 
   search_products:
     kind: bigquery-sql
     source: furniture-bq-source
     statement: |
-      SELECT 
-        product_id,
-        product_name,
-        description,
-        category,
-        subcategory,
-        base_price
-      FROM `adk-demo-469711.mobilis.products`
-      WHERE LOWER(product_name) LIKE LOWER(CONCAT('%', @search_term, '%'))
-         OR LOWER(description) LIKE LOWER(CONCAT('%', @search_term, '%'))
-         OR LOWER(category) LIKE LOWER(CONCAT('%', @search_term, '%'))
-      LIMIT 20
+      SELECT DISTINCT 
+        p.product_name,
+        p.category,
+        p.base_price,
+        COUNT(s.store_id) as stores_with_stock,
+        SUM(s.available_quantity) as total_available
+      FROM `adk-demo-469711.mobilis.products` p
+      LEFT JOIN `adk-demo-469711.mobilis.stock` s ON p.product_id = s.product_id
+      WHERE LOWER(p.product_name) LIKE LOWER(CONCAT('%', @product_name, '%'))
+        AND s.available_quantity > 0
+      GROUP BY p.product_name, p.category, p.base_price
+      ORDER BY p.product_name
     parameters:
-      - name: search_term
+      - name: product_name
         type: string
-        description: Search term for products
+        description: Product name to search for
     description: |
-      Search for furniture products by name, category, or description.
+      Search for products by name across all stores, showing prices and availability.
 
   check_product_availability:
     kind: bigquery-sql
     source: furniture-bq-source
     statement: |
       SELECT 
-        s.store_id, 
-        s.available_quantity, 
-        s.color, 
-        s.location_in_store, 
         st.store_name,
-        p.product_name, 
-        p.description
+        st.store_id,
+        p.product_name,
+        p.category,
+        p.base_price,
+        s.color,
+        s.available_quantity,
+        s.location_in_store
       FROM `adk-demo-469711.mobilis.stock` s
-      LEFT JOIN `adk-demo-469711.mobilis.stores` st ON s.store_id = st.store_id
-      LEFT JOIN `adk-demo-469711.mobilis.products` p ON s.product_id = p.product_id
+      JOIN `adk-demo-469711.mobilis.stores` st ON s.store_id = st.store_id
+      JOIN `adk-demo-469711.mobilis.products` p ON s.product_id = p.product_id
       WHERE LOWER(p.product_name) LIKE LOWER(CONCAT('%', @product_name, '%'))
         AND s.available_quantity > 0
-      ORDER BY s.available_quantity DESC
+      ORDER BY st.store_name, p.product_name
     parameters:
       - name: product_name
         type: string
         description: Product name to search for
     description: |
-      Check product availability across all stores.
+      Check which stores have a specific product in stock, including prices.
 
   simple_test_query:
     kind: bigquery-sql
@@ -167,10 +167,11 @@ tools:
     source: furniture-bq-source
     statement: |
       SELECT 
-        s.store_id,
         st.store_name,
-        s.product_id,
+        st.store_id,
         p.product_name,
+        p.category,
+        p.base_price,
         s.color,
         s.available_quantity,
         s.location_in_store
@@ -188,7 +189,53 @@ tools:
         type: string
         description: Product name to search for
     description: |
-      Search for specific products at a specific store by name.
+      Search for specific products at a specific store by name, including prices.
+
+  check_our_store_inventory:
+    kind: bigquery-sql
+    source: furniture-bq-source
+    statement: |
+      SELECT 
+        st.store_name,
+        st.store_id,
+        p.product_name,
+        p.category,
+        s.color,
+        s.available_quantity,
+        s.location_in_store,
+        p.base_price
+      FROM `adk-demo-469711.mobilis.stock` s
+      JOIN `adk-demo-469711.mobilis.stores` st ON s.store_id = st.store_id
+      JOIN `adk-demo-469711.mobilis.products` p ON s.product_id = p.product_id
+      WHERE s.store_id = @store_id
+        AND s.available_quantity > 0
+      ORDER BY p.category, p.product_name
+    parameters:
+      - name: store_id
+        type: string
+        description: Our store ID (use STORE_001 for our current store)
+    description: |
+      Check inventory specifically for OUR store. Use STORE_001 as the store_id parameter.
+
+  get_our_store_info:
+    kind: bigquery-sql
+    source: furniture-bq-source
+    statement: |
+      SELECT 
+        store_id,
+        store_name,
+        city,
+        address,
+        phone,
+        manager_name
+      FROM `adk-demo-469711.mobilis.stores`
+      WHERE store_id = @store_id
+    parameters:
+      - name: store_id
+        type: string
+        description: Our store ID (use STORE_001)
+    description: |
+      Get detailed information about OUR store. Use STORE_001 as the store_id parameter.
 
 toolsets:
   furniture_toolset:
@@ -204,3 +251,5 @@ toolsets:
     - check_product_availability
     - simple_test_query
     - search_by_store_name
+    - check_our_store_inventory
+    - get_our_store_info

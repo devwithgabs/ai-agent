@@ -10,7 +10,7 @@ __pycache__/
 .venv/
 venv/
 env/
-.env/
+searcher-agent/.env/
 
 # ---- IDE & OS Files ----
 .idea/
@@ -19,7 +19,7 @@ env/
 Thumbs.db
 
 # ---- Environment & Secrets ----
-.env
+searcher-agent/.env
 .env.local
 .env.example
 *.json
